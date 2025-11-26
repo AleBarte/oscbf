@@ -18,8 +18,8 @@ import jax.numpy as jnp
 from jax.typing import ArrayLike
 
 from cbfpy import CBF
-from oscbf.core.manipulator import Manipulator, load_panda
-from oscbf.core.manipulation_env import FrankaTorqueControlEnv, FrankaVelocityControlEnv
+from oscbf.core.manipulator import Manipulator, load_panda, load_ur5e
+from oscbf.core.manipulation_env import FrankaTorqueControlEnv, FrankaVelocityControlEnv, URVelocityControlEnv
 from oscbf.core.oscbf_configs import OSCBFTorqueConfig, OSCBFVelocityConfig
 from oscbf.core.controllers import PoseTaskTorqueController, PoseTaskVelocityController
 
@@ -90,7 +90,6 @@ class CollisionsVelocityConfig(OSCBFVelocityConfig):
     def h_1(self, z, **kwargs):
         # Extract values
         q = z[: self.num_joints]
-
         # Collision Avoidance
         robot_collision_pos_rad = self.robot.link_collision_data(q)
         robot_collision_positions = robot_collision_pos_rad[:, :3]
@@ -184,13 +183,7 @@ def compute_velocity_control(
     # Set nullspace desired joint position
     des_q = jnp.array(
         [
-            0.0,
-            -jnp.pi / 6,
-            0.0,
-            -3 * jnp.pi / 4,
-            0.0,
-            5 * jnp.pi / 9,
-            0.0,
+            np.pi/2, -np.pi / 2, np.pi/2, -np.pi/2, np.pi/2, 0.0
         ]
     )
     u_nom = osc_controller(
@@ -199,10 +192,10 @@ def compute_velocity_control(
     return cbf.safety_filter(q, u_nom)
 
 
-def main(control_method="torque", num_bodies=25):
+def main(control_method="torque", num_bodies=4):
     assert control_method in ["torque", "velocity"]
 
-    robot = load_panda()
+    robot = load_ur5e()
     z_min = 0.1
 
     max_num_bodies = 50
@@ -236,7 +229,7 @@ def main(control_method="torque", num_bodies=25):
             load_table=True,
         )
     else:
-        env = FrankaVelocityControlEnv(
+        env = URVelocityControlEnv(
             real_time=True,
             bg_color=bg_color,
             load_floor=False,

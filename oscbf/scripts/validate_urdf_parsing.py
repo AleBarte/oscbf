@@ -15,9 +15,9 @@ import numpy as np
 
 from oscbf.core.manipulator import Manipulator
 
-URDF = "oscbf/assets/franka_panda/panda.urdf"
+URDF = "/home/alebarte/oscbf/oscbf/assets/ur5e/ur5e.urdf"
 FRANKA_INIT_QPOS = np.array(
-    [0.0, -np.pi / 6, 0.0, -3 * np.pi / 4, 0.0, 5 * np.pi / 9, 0.0]
+    [np.pi/2, -np.pi / 2, -np.pi/2, -np.pi/2, np.pi/2, 0.0]
 )
 
 
@@ -31,6 +31,7 @@ def visualize_parsed_tfs(urdf: str, randomize: bool = False):
         flags=pybullet.URDF_MERGE_FIXED_LINKS | pybullet.URDF_USE_INERTIA_FROM_FILE,
     )
     manipulator = Manipulator.from_urdf(urdf)
+    print(manipulator.num_joints, "joints parsed")
 
     if randomize:
         # Set some random joint angles

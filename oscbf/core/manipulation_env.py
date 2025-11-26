@@ -333,7 +333,7 @@ class FrankaTorqueControlEnv(ManipulationEnv):
         load_table=False,
     ):
         super().__init__(
-            "oscbf/assets/franka_panda/panda.urdf",
+            "/home/alebarte/oscbf/oscbf/assets/franka_panda/panda.urdf",
             "torque",
             xyz_min,
             xyz_max,
@@ -373,7 +373,7 @@ class FrankaVelocityControlEnv(ManipulationEnv):
         load_table=False,
     ):
         super().__init__(
-            "oscbf/assets/franka_panda/panda.urdf",
+            "/home/alebarte/oscbf/oscbf/assets/franka_panda/panda.urdf",
             "velocity",
             xyz_min,
             xyz_max,
@@ -392,6 +392,44 @@ class FrankaVelocityControlEnv(ManipulationEnv):
             load_table=load_table,
         )
 
+class URVelocityControlEnv(ManipulationEnv):
+    """Simulation environment for UR5e end-effector pose tracking, with velocity control"""
+
+    def __init__(
+        self,
+        xyz_min=None,
+        xyz_max=None,
+        target_pos=(0.5, 0, 0.5),
+        q_init=(np.pi/2, -np.pi / 2, -np.pi/2, -np.pi/2, np.pi/2, 0.0),
+        traj=None,
+        collision_data=None,
+        wb_xyz_min=None,
+        wb_xyz_max=None,
+        bg_color=None,
+        load_floor=True,
+        real_time=False,
+        timestep=1 / 240,
+        load_table=False,
+    ):
+        super().__init__(
+            "/home/alebarte/oscbf/oscbf/assets/ur5e/ur5e.urdf",
+            "velocity",
+            xyz_min,
+            xyz_max,
+            target_pos,
+            q_init,
+            traj,
+            collision_data,
+            wb_xyz_min,
+            wb_xyz_max,
+            bg_color,
+            load_floor,
+            qdot_max=np.array((1.0, 1.0, 1.0, 1.0, 1.0, 1.0)),
+            tau_max=np.array((150.0, 150.0, 150.0, 28.0, 28.0, 28.0)),
+            real_time=real_time,
+            timestep=timestep,
+            load_table=load_table,
+        )
 
 # TODO make this more general -- the des_q only works for a 7DOF robot
 # (same thing applies for the nominal torque controller)

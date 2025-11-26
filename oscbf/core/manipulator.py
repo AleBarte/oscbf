@@ -16,6 +16,12 @@ from oscbf.core.franka_collision_model import (
     base_self_collision_data,
 )
 
+from oscbf.core.ur5e_collision_model import (
+    ur5e_collision_data,
+    ur5e_self_collision_data,
+    base_self_collision_data
+)
+
 
 def tuplify(arr):
     """Recursively convert a nested structure (for instance, lists, tuples, arrays) to a tuple.
@@ -912,10 +918,28 @@ def load_panda() -> Manipulator:
         base_self_collision_data=base_self_collision_data,
     )
 
+def load_ur5e() -> Manipulator:
+    """Create a Manipulator object for the Universal Robots UR5"""
+
+    return Manipulator.from_urdf(
+        find_assets_dir() + "ur5e/ur5e.urdf",
+        ee_offset=np.block(
+            [
+                [np.array([[1.0, 0.0, 0.0],
+                           [0.0, 0.0, 1.0],
+                           [0.0, -1.0, 0.0]]), np.reshape(np.array([0.0, 0.1, 0.0]), (-1, 1))],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        ),
+        collision_data=ur5e_collision_data,
+        self_collision_data=ur5e_self_collision_data,
+        base_self_collision_data=base_self_collision_data,
+    )
+
 
 def main():
     # Quick validation that the manipulator class works
-    robot = load_panda()
+    robot = load_ur5e()
     q = jnp.zeros(robot.num_joints)
     qdot = 0.1 * jnp.ones(robot.num_joints)
     np.set_printoptions(precision=3, suppress=True)
