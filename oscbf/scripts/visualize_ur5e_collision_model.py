@@ -92,4 +92,4 @@ def main(self_collision=False):
 
 
 if __name__ == "__main__":
-    main(self_collision=True)
+    main(self_collision=False)

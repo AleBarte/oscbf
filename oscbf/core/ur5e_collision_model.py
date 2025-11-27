@@ -72,13 +72,14 @@ wrist_2_link_radii = (
 # tool0 is at (0, 0.1, 0) after rotation
 wrist_3_link_pos = (
     (0, 0.1, 0),
+    (0, 0.2, 0),
 )
 wrist_3_link_radii = (
+    0.06,
     0.06,
 )
 
 positions_list = (
-    base_link_pos,
     shoulder_link_pos,
     upper_arm_link_pos,
     forearm_link_pos,
@@ -88,7 +89,6 @@ positions_list = (
 )
 
 radii_list = (
-    base_link_radii,
     shoulder_link_radii,
     upper_arm_link_radii,
     forearm_link_radii,

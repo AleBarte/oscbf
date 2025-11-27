@@ -94,6 +94,8 @@ class CollisionsVelocityConfig(OSCBFVelocityConfig):
         robot_collision_pos_rad = self.robot.link_collision_data(q)
         robot_collision_positions = robot_collision_pos_rad[:, :3]
         robot_collision_radii = robot_collision_pos_rad[:, 3, None]
+        print(robot_collision_positions)
+        print(robot_collision_radii) 
         center_deltas = (
             robot_collision_positions[:, None, :] - self.collision_positions[None, :, :]
         ).reshape(-1, 3)
@@ -173,6 +175,7 @@ def compute_velocity_control(
     z_ee_des: ArrayLike,
 ):
     q = z[: robot.num_joints]
+    print(q)
     M_inv, J, ee_tmat = robot.dynamically_consistent_velocity_control_matrices(q)
     pos = ee_tmat[:3, 3]
     rot = ee_tmat[:3, :3]
@@ -293,6 +296,7 @@ def main(control_method="torque", num_bodies=4):
 
     while True:
         q_qdot = env.get_joint_state()
+        # print(q_qdot[:6])
         z_zdot_ee_des = env.get_desired_ee_state()
         tau = compute_control(q_qdot, z_zdot_ee_des)
         env.apply_control(tau)

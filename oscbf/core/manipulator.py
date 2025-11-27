@@ -407,6 +407,7 @@ class Manipulator:
         assert isinstance(radii, tuple)
         if len(positions) == 0 or len(radii) == 0:
             return (), (), ()
+        print(len(positions))
         sphere_counts = tuple(len(rs) for rs in radii)
         max_spheres_per_link = max(sphere_counts)
         padded_positions = np.zeros((self.num_joints, max_spheres_per_link, 3))
