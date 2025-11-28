@@ -387,39 +387,47 @@ class Manipulator:
     def _process_collision_data(self, positions: tuple, radii: tuple) -> Tuple[tuple, tuple, tuple]:
         """Helper function: Sets up a padded representation of the collision sphere positions and
         radii for vmapping with uniform shape
-
         This should only be called once upon initialization
-
         Args:
             positions (tuple): Collision sphere locations for each link. Tuple of len (num_links)
                 where each entry contains a set of points (length 3) for that link
             radii (tuple): Collision sphere radii for each link. Tuple of len (num_links)
                 where each entry contains a set of radii for that link
-
         Returns:
             Tuple[tuple, tuple, tuple]:
-                padded_positions: Positions, shape (num_joints, max_spheres_per_link, 3)
-                padded_radii: Radii, shape (num_joints, max_spheres_per_link)
+                padded_positions: Positions, shape (num_links, max_spheres_per_link, 3)
+                padded_radii: Radii, shape (num_links, max_spheres_per_link)
                 slice_indices: Indices of the *flattened* padded position and radii to select,
                     corresponding to the non-padded data
         """
         assert isinstance(positions, tuple)
         assert isinstance(radii, tuple)
+
         if len(positions) == 0 or len(radii) == 0:
             return (), (), ()
+
+        # Use actual number of links from the data, not self.num_joints
+        num_links = len(positions)
+        
         sphere_counts = tuple(len(rs) for rs in radii)
         max_spheres_per_link = max(sphere_counts)
-        padded_positions = np.zeros((self.num_joints, max_spheres_per_link, 3))
-        padded_radii = np.zeros((self.num_joints, max_spheres_per_link))
-        for link_idx in range(self.num_joints):
+
+        # Use num_links instead of self.num_joints
+        padded_positions = np.zeros((num_links, max_spheres_per_link, 3))
+        padded_radii = np.zeros((num_links, max_spheres_per_link))
+
+        for link_idx in range(num_links):
             for sphere_idx in range(sphere_counts[link_idx]):
                 padded_positions[link_idx, sphere_idx] = positions[link_idx][sphere_idx]
                 padded_radii[link_idx, sphere_idx] = radii[link_idx][sphere_idx]
+
         padded_positions = tuplify(padded_positions)
         padded_radii = tuplify(padded_radii)
-        # mask: (num_joints, max_spheres) - True for non-padded spheres
+
+        # mask: (num_links, max_spheres) - True for non-padded spheres
         sphere_mask = np.arange(max_spheres_per_link) < np.asarray(sphere_counts)[:, None]
         slice_indices = tuplify(np.flatnonzero(sphere_mask.flatten()))
+
         return padded_positions, padded_radii, slice_indices
 
     def joint_to_world_transforms(self, q: Array) -> Array:
@@ -617,14 +625,22 @@ class Manipulator:
         padded_collision_radii = jnp.asarray(self.padded_collision_radii)
         collision_slice_indices = jnp.asarray(self.collision_slice_indices)
 
+        # Handle base link (index 0) separately - it's in world frame already
+        # Create identity transform for base link
+        base_transform = jnp.eye(4)
+
+        # Stack base transform with joint transforms
+        # all_transforms shape: (num_links, 4, 4) where num_links = num_joints + 1
+        all_transforms = jnp.vstack([base_transform[jnp.newaxis, :, :], joint_transforms])
+
         # Compute collision body positions in world frame
         transformed_pts_padded = jax.vmap(transform_points)(
-            joint_transforms, padded_collision_positions
-        )  # Shape (num_joints, max_spheres, 3)
+            all_transforms, padded_collision_positions
+        )  # Shape (num_links, max_spheres, 3)
 
         # Flatten and select only the non-padded collision data
-        # Flat points shape (num_joints * max_spheres, 3),
-        # Flat radii shape (num_joints * max_spheres, 1)
+        # Flat points shape (num_links * max_spheres, 3),
+        # Flat radii shape (num_links * max_spheres, 1)
         all_pts_flat = transformed_pts_padded.reshape(-1, 3)
         all_radii_flat = padded_collision_radii.reshape(-1, 1)
         pts_unpadded = all_pts_flat[collision_slice_indices]
@@ -655,19 +671,28 @@ class Manipulator:
         """Helper function: Compute the self collision data for all links given the joint transforms"""
         if not self.has_self_collision_data:
             return jnp.array([])
-
+    
+        # Create identity transform for base link and stack with joint transforms
+        base_transform = jnp.eye(4)
+        all_transforms = jnp.vstack([base_transform[jnp.newaxis, :, :], joint_transforms])
+        
         pts = []
         radii = []
-        for i in range(self.num_joints):
+        # Iterate over all links (including base at index 0)
+        num_links = len(self.self_collision_positions)
+        for i in range(num_links):
             if len(self.self_collision_positions[i]) > 0:
                 pts.append(
-                    transform_points(joint_transforms[i], jnp.asarray(self.self_collision_positions[i]))
+                    transform_points(all_transforms[i], jnp.asarray(self.self_collision_positions[i]))
                 )
                 radii.append(jnp.asarray(self.self_collision_radii[i]))
+        
+        if len(pts) == 0:
+            return jnp.array([])
+            
         pts = jnp.vstack(pts)
         radii = jnp.concatenate(radii).reshape(-1, 1)
         return jnp.hstack([pts, radii])
-
     def _get_linear_jacobians_transposed(self, joint_transforms: Array) -> Array:
         """Helper function: Compute an array containing the linear jacobians Jv for every link
 
